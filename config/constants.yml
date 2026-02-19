@@ -1,0 +1,42 @@
+# AON_PERF — Costanti da creare in Appian Designer
+#
+# Per ognuna: Designer → New → Constant
+# Tipo e valore come indicato sotto.
+# Aggiornare i valori prima del deploy in PROD.
+
+constants:
+
+  AON_PERF_DEFAULT_TREND_DAYS:
+    type: Integer
+    value: 30
+    description: "Giorni di storico mostrati di default nella dashboard."
+
+  AON_PERF_STUCK_THRESHOLD_MINS:
+    type: Integer
+    value: 60
+    description: >
+      Minuti oltre i quali un processo ACTIVE è considerato bloccato.
+      Consigliati: DEV=120, TEST=90, PROD=60.
+
+  AON_PERF_ALERT_RECIPIENTS:
+    type: Text
+    value: "team-operations@azienda.it"
+    description: >
+      Indirizzi email destinatari degli alert.
+      Separare più indirizzi con punto e virgola (;).
+      Esempio: "responsabile@azienda.it;supporto@azienda.it"
+
+  AON_PERF_MONITORED_PROCESS_MODELS:
+    type: Text
+    value: '["Invio Mail", "Sincronizzazione Dati", "Generazione Report", "Import Anagrafiche"]'
+    description: >
+      Array JSON con i nomi esatti dei Process Model critici da monitorare.
+      Usare i nomi come appaiono in Appian Process Monitor.
+
+  AON_PERF_PAR_EXECUTION_TIMES:
+    type: Text
+    value: "INSERIRE-UUID-PAR-QUI"
+    description: >
+      UUID del Process Analytics Report configurato con le 7 colonne richieste.
+      Vedi docs/setup-guide.md §1 per la procedura di creazione.
+      L'UUID è visibile nell'URL: /suite/rest/a/applications/latest/self/report/{UUID}
