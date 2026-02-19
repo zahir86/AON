@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_ScheduledMonitor
+  Process Model schedulato che esegue il controllo periodico
+  dei processi bloccati e invia alert.
+
+  CONFIGURAZIONE TIMER:
+    - Esecuzione ogni 15 minuti (configurare nel Start Event del PM)
+    - Oppure ogni 30 minuti in ambienti meno critici
+
+  FLUSSO:
+    1. Start Event (Timer: ogni 15 min)
+       └── Script Task: Recupera lista processi bloccati
+           └── Gateway XOR: ci sono processi bloccati?
+               ├── [SÌ]  → Script Task: Prepara corpo email
+               │           └── Call Activity: AON_PERF_SendAlert
+               │               └── End Event
+               └── [NO]  → End Event (nessuna azione)
+
+  VARIABILI DI PROCESSO:
+    pv!stuckResult    (Dictionary) - Output di AON_PERF_checkStuckProcesses
+    pv!alertBody      (Text)       - Corpo email formattato
+    pv!recipients     (Text)       - Destinatari (da costante)
+
+  PERMESSI:
+    Eseguire come: Service Account dedicato con accesso ai Process Analytics Report
+-->
+<ae:processModel xmlns:ae="http://www.appian.com/ae/types/2009"
+                 name="AON_PERF_ScheduledMonitor"
+                 description="Monitor schedulato (ogni 15 min) per il rilevamento di processi bloccati. Avvia AON_PERF_SendAlert se rileva anomalie.">
+
+  <!--
+    ========================================================
+    STEP 1 — Script Task: Controlla processi bloccati
+    ========================================================
+    Esegue la regola di controllo e salva il risultato.
+
+    Espressione da inserire nello Script Task:
+  -->
+  <ae:script name="Controlla Processi Bloccati"><![CDATA[
+a!save(
+  pv!stuckResult,
+  rule!AON_PERF_checkStuckProcesses(
+    thresholdMins:     null(),    /* usa il default da costante */
+    processModelNames: {}         /* controlla tutti i processi monitorati */
+  )
+)
+  ]]></ae:script>
+
+  <!--
+    ========================================================
+    STEP 2 — Gateway XOR: ci sono processi bloccati?
+    ========================================================
+    Condizione sul percorso "SÌ":
+      pv!stuckResult.hasStuck = true()
+
+    Condizione sul percorso "NO" (default):
+      not(pv!stuckResult.hasStuck)
+  -->
+
+  <!--
+    ========================================================
+    STEP 3 — Script Task: Prepara corpo email
+    ========================================================
+    Espressione da inserire nello Script Task:
+  -->
+  <ae:script name="Prepara Corpo Email"><![CDATA[
+a!localVariables(
+  local!stuck:     index(pv!stuckResult, "stuckList", {}),
+  local!count:     index(pv!stuckResult, "stuckCount", 0),
+  local!threshold: cons!AON_PERF_STUCK_THRESHOLD_MINS,
+
+  local!detailLines: a!forEach(
+    items: local!stuck,
+    expression:
+      "- " & index($item, "processModelName", "") &
+      " [" & index($item, "processName", "") & "]" &
+      " avviato il " &
+      text(index($item, "startTime", null()), "dd/MM/yyyy HH:mm") &
+      " — in esecuzione da " &
+      rule!AON_PERF_formatDuration(
+        seconds: index($item, "runningMins", 0) * 60
+      ) &
+      " (avviato da: " & index($item, "initiator", "N/D") & ")"
+  ),
+
+  a!save(
+    pv!alertBody,
+    "ALERT — Processi Bloccati in Hygieia" & char(10) &
+    "Data/ora rilevamento: " & text(now(), "dd/MM/yyyy HH:mm:ss") & char(10) &
+    char(10) &
+    local!count & " processo/i risultano ATTIVI da più di " &
+    local!threshold & " minuti:" & char(10) &
+    char(10) &
+    joinarray(local!detailLines, char(10)) &
+    char(10) & char(10) &
+    "Verificare immediatamente lo stato dei processi in Appian Process Monitor." & char(10) &
+    "Accesso diretto: " & a!urlForRecord(recordType: null()) /* adattare con link al PM */
+  )
+)
+  ]]></ae:script>
+
+  <!--
+    ========================================================
+    STEP 4 — Call Activity: AON_PERF_SendAlert
+    ========================================================
+    Parametri da passare al sub-processo:
+      alertSubject  = "ALERT Hygieia — " & pv!stuckResult.stuckCount & " processi bloccati"
+      alertBody     = pv!alertBody
+      recipients    = cons!AON_PERF_ALERT_RECIPIENTS
+  -->
+
+</ae:processModel>

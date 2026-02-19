@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_getInstantMetrics
+  Recupera le metriche istantanee degli ultimi N minuti (default 5).
+  Usato dal pannello "Stato in tempo reale" della dashboard.
+
+  INPUT:
+    ri!minutes            - Finestra temporale in minuti (default: 5)
+    ri!processModelNames  - Lista nomi da filtrare (vuoto = tutti)
+
+  OUTPUT: Dictionary {
+    windowMins    : Integer  (finestra usata)
+    activeCount   : Integer  (processi attivi in questo momento)
+    completedCount: Integer  (completati nella finestra)
+    errorCount    : Integer  (errori nella finestra)
+    avgSec        : Number   (tempo medio esecuzioni completate)
+    byProcess     : List of {
+                      processModelName,
+                      activeCount,
+                      completedCount,
+                      errorCount,
+                      avgSec
+                    }
+    lastUpdated   : DateTime
+  }
+-->
+<ae:expressionRule xmlns:ae="http://www.appian.com/ae/types/2009"
+                   name="AON_PERF_getInstantMetrics"
+                   description="Metriche istantanee degli ultimi N minuti: processi attivi, completati, errori e tempi medi. Usato per la sezione 'real-time' della dashboard.">
+
+  <ae:inputs>
+    <ae:input name="ri!minutes"            type="?Integer"/>
+    <ae:input name="ri!processModelNames"  type="List of Text String"/>
+  </ae:inputs>
+
+  <ae:expression><![CDATA[
+/* ===========================================
+ * AON_PERF_getInstantMetrics
+ *
+ * Finestra scorrevole di ultimi N minuti.
+ * Mostra carico istantaneo e picchi.
+ * =========================================== */
+a!localVariables(
+  local!mins:   if(isnull(ri!minutes), 5, ri!minutes),
+  local!cutoff: now() - (local!mins / (24 * 60)),   /* now() - N minuti */
+
+  /* Query diretta al PAR con filtro su startTime recente */
+  local!queryResult: a!queryProcessAnalytics(
+    processAnalyticsReport: a!processAnalyticsReportById(
+      id: cons!AON_PERF_PAR_EXECUTION_TIMES
+    ),
+    query: a!query(
+      selection: a!querySelection(
+        columns: {
+          a!queryColumn(field: "c1"),   /* processName        */
+          a!queryColumn(field: "c2"),   /* processModelName   */
+          a!queryColumn(field: "c3"),   /* startTime          */
+          a!queryColumn(field: "c4"),   /* completionTime     */
+          a!queryColumn(field: "c5"),   /* elapsedSec         */
+          a!queryColumn(field: "c6")    /* status             */
+        }
+      ),
+      filter: a!queryLogicalExpression(
+        operator: "AND",
+        filters: {
+          /* Processi avviati nell'ultima finestra temporale */
+          a!queryFilter(field: "c3", operator: ">=", value: local!cutoff),
+          if(
+            not(isnull(ri!processModelNames)) &
+              length(ri!processModelNames) > 0,
+            a!queryFilter(
+              field: "c2",
+              operator: "in",
+              value: ri!processModelNames
+            ),
+            {}
+          )
+        }
+      ),
+      pagingInfo: a!pagingInfo(startIndex: 1, batchSize: 1000)
+    )
+  ),
+
+  local!rows: index(local!queryResult, "data", {}),
+
+  /* Categorie di stato */
+  local!activeRows: filter(
+    lambda!r(index(r, "c6", "") = "ACTIVE"),
+    local!rows
+  ),
+  local!completedRows: filter(
+    lambda!r(index(r, "c6", "") = "COMPLETED"),
+    local!rows
+  ),
+  local!errorRows: filter(
+    lambda!r(index(r, "c6", "") = "ERROR"),
+    local!rows
+  ),
+
+  local!completedTimes: filter(
+    lambda!v(not(isnull(v))),
+    index(local!completedRows, "c5", {})
+  ),
+
+  /* Statistiche per modello */
+  local!models: toSet(
+    filter(lambda!v(not(isnull(v))), index(local!rows, "c2", {}))
+  ),
+
+  local!byProcess: a!forEach(
+    items: local!models,
+    expression: a!localVariables(
+      local!pm: $item,
+      local!pmActive:    filter(lambda!r(index(r,"c2","")=local!pm & index(r,"c6","")="ACTIVE"),    local!rows),
+      local!pmCompleted: filter(lambda!r(index(r,"c2","")=local!pm & index(r,"c6","")="COMPLETED"), local!rows),
+      local!pmErrors:    filter(lambda!r(index(r,"c2","")=local!pm & index(r,"c6","")="ERROR"),     local!rows),
+      local!pmTimes:     filter(lambda!v(not(isnull(v))), index(local!pmCompleted, "c5", {})),
+      {
+        processModelName: local!pm,
+        activeCount:      length(local!pmActive),
+        completedCount:   length(local!pmCompleted),
+        errorCount:       length(local!pmErrors),
+        avgSec: if(
+          length(local!pmTimes) = 0, null(),
+          round(average(local!pmTimes), 1)
+        )
+      }
+    )
+  ),
+
+  /* --- Output --- */
+  {
+    windowMins:     local!mins,
+    activeCount:    length(local!activeRows),
+    completedCount: length(local!completedRows),
+    errorCount:     length(local!errorRows),
+    avgSec: if(
+      length(local!completedTimes) = 0, null(),
+      round(average(local!completedTimes), 1)
+    ),
+    byProcess:   local!byProcess,
+    lastUpdated: now()
+  }
+)
+  ]]></ae:expression>
+
+</ae:expressionRule>

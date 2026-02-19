@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_AlertSettings
+  Interfaccia di configurazione del sistema di alerting.
+  Permette di modificare soglie, destinatari e lista processi critici
+  senza dover cambiare direttamente le costanti in Appian.
+
+  Nota: le modifiche salvate aggiornano le costanti tramite il meccanismo
+  di admin rule (richiede privilegi amministrativi sul sito).
+-->
+<ae:interface xmlns:ae="http://www.appian.com/ae/types/2009"
+              name="AON_PERF_AlertSettings"
+              description="Configurazione soglie e destinatari del sistema di alerting per processi bloccati.">
+
+  <ae:form><![CDATA[
+/* ===========================================
+ * AON_PERF_AlertSettings  -  Configurazione Alert
+ * =========================================== */
+a!localVariables(
+
+  /* Valori iniziali dalle costanti */
+  local!threshold:         cons!AON_PERF_STUCK_THRESHOLD_MINS,
+  local!recipients:        cons!AON_PERF_ALERT_RECIPIENTS,
+  local!monitoredModels:   fromjson(cons!AON_PERF_MONITORED_PROCESS_MODELS),
+  local!newModelInput:     "",
+  local!saveSuccess:       false(),
+  local!saveError:         false(),
+
+  a!formLayout(
+    label: "Configurazione Alerting — Performance Monitoring",
+    contents: {
+
+      /* ---- Soglia blocco processo ---- */
+      a!sectionLayout(
+        label: "Soglia rilevamento processi bloccati",
+        labelSize: "MEDIUM",
+        contents: {
+          a!columnsLayout(
+            columns: {
+              a!columnLayout(
+                width: "NARROW",
+                contents: {
+                  a!integerField(
+                    label: "Minuti prima di considerare un processo bloccato",
+                    labelPosition: "ABOVE",
+                    value: local!threshold,
+                    saveInto: local!threshold,
+                    validations: {
+                      a!validation(
+                        expression: local!threshold >= 5,
+                        message: "La soglia minima è 5 minuti."
+                      ),
+                      a!validation(
+                        expression: local!threshold <= 1440,
+                        message: "La soglia massima è 1440 minuti (24 ore)."
+                      )
+                    },
+                    helpTooltip: "Quando un processo rimane ACTIVE più a lungo di questo valore, viene inviato un alert. Default: 60."
+                  )
+                }
+              ),
+              a!columnLayout(
+                contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: {
+                      a!richTextItem(
+                        text: "Valore corrente: " & cons!AON_PERF_STUCK_THRESHOLD_MINS & " minuti",
+                        color: "SECONDARY",
+                        size: "SMALL"
+                      ),
+                      char(10),
+                      a!richTextItem(
+                        text: "Il monitor schedulato viene eseguito ogni 15 minuti.",
+                        color: "SECONDARY",
+                        size: "SMALL"
+                      )
+                    }
+                  )
+                }
+              )
+            }
+          )
+        }
+      ),
+
+      /* ---- Destinatari email ---- */
+      a!sectionLayout(
+        label: "Destinatari notifiche email",
+        labelSize: "MEDIUM",
+        contents: {
+          a!textField(
+            label: "Indirizzi email (separati da ';')",
+            labelPosition: "ABOVE",
+            value: local!recipients,
+            saveInto: local!recipients,
+            validations: {
+              a!validation(
+                expression: length(local!recipients) > 0,
+                message: "Inserire almeno un indirizzo email."
+              )
+            },
+            helpTooltip: "Esempio: responsabile@azienda.it;supporto@azienda.it",
+            width: "WIDE"
+          )
+        }
+      ),
+
+      /* ---- Modelli di processo monitorati ---- */
+      a!sectionLayout(
+        label: "Modelli di processo critici monitorati",
+        labelSize: "MEDIUM",
+        contents: {
+
+          a!richTextDisplayField(
+            labelPosition: "COLLAPSED",
+            value: a!richTextItem(
+              text: "Questi processi vengono controllati ad ogni esecuzione del monitor schedulato. " &
+                    "Inserire i nomi esatti come appaiono in Appian.",
+              color: "SECONDARY",
+              size: "SMALL"
+            )
+          ),
+
+          /* Lista corrente */
+          a!forEach(
+            items: local!monitoredModels,
+            expression: a!columnsLayout(
+              columns: {
+                a!columnLayout(
+                  width: "WIDE",
+                  contents: {
+                    a!textField(
+                      labelPosition: "COLLAPSED",
+                      value: $item,
+                      readOnly: true()
+                    )
+                  }
+                ),
+                a!columnLayout(
+                  width: "NARROW",
+                  contents: {
+                    a!buttonArrayLayout(
+                      buttons: {
+                        a!buttonWidget(
+                          label: "Rimuovi",
+                          style: "LINK",
+                          size: "SMALL",
+                          saveInto: {
+                            a!save(
+                              local!monitoredModels,
+                              remove(local!monitoredModels, fv!index)
+                            )
+                          }
+                        )
+                      }
+                    )
+                  }
+                )
+              }
+            )
+          ),
+
+          /* Aggiunta nuovo modello */
+          a!columnsLayout(
+            columns: {
+              a!columnLayout(
+                width: "WIDE",
+                contents: {
+                  a!textField(
+                    label: "Aggiungi modello di processo",
+                    labelPosition: "ABOVE",
+                    placeholder: "Nome esatto del Process Model...",
+                    value: local!newModelInput,
+                    saveInto: local!newModelInput
+                  )
+                }
+              ),
+              a!columnLayout(
+                width: "NARROW",
+                contents: {
+                  a!buttonArrayLayout(
+                    buttons: {
+                      a!buttonWidget(
+                        label: "Aggiungi",
+                        style: "SECONDARY",
+                        showWhen: length(trim(local!newModelInput)) > 0,
+                        saveInto: {
+                          a!save(
+                            local!monitoredModels,
+                            append(
+                              local!monitoredModels,
+                              trim(local!newModelInput)
+                            )
+                          ),
+                          a!save(local!newModelInput, "")
+                        }
+                      )
+                    }
+                  )
+                }
+              )
+            }
+          )
+        }
+      ),
+
+      /* ---- Feedback salvataggio ---- */
+      a!richTextDisplayField(
+        showWhen: local!saveSuccess,
+        labelPosition: "COLLAPSED",
+        value: a!richTextItem(
+          text: "Configurazione salvata correttamente.",
+          color: "POSITIVE",
+          style: "STRONG"
+        )
+      ),
+      a!richTextDisplayField(
+        showWhen: local!saveError,
+        labelPosition: "COLLAPSED",
+        value: a!richTextItem(
+          text: "Errore durante il salvataggio. Verificare i permessi e riprovare.",
+          color: "NEGATIVE",
+          style: "STRONG"
+        )
+      )
+
+    }, /* /contents */
+
+    buttons: a!buttonLayout(
+      primaryButtons: {
+        a!buttonWidget(
+          label: "Salva configurazione",
+          style: "PRIMARY",
+          validate: true(),
+          saveInto: {
+            /*
+              TODO: Aggiungere qui la chiamata al Process Model
+              AON_PERF_SaveAlertConfig che aggiorna le costanti.
+              Esempio:
+              a!startProcess(
+                processModel: cons!AON_PERF_PM_SAVE_CONFIG,
+                processParameters: {
+                  threshold:       local!threshold,
+                  recipients:      local!recipients,
+                  monitoredModels: tojson(local!monitoredModels)
+                }
+              )
+            */
+            a!save(local!saveSuccess, true()),
+            a!save(local!saveError,   false())
+          }
+        )
+      },
+      secondaryButtons: {
+        a!buttonWidget(
+          label: "Annulla",
+          style: "NORMAL",
+          saveInto: {
+            a!save(local!threshold,       cons!AON_PERF_STUCK_THRESHOLD_MINS),
+            a!save(local!recipients,      cons!AON_PERF_ALERT_RECIPIENTS),
+            a!save(local!monitoredModels, fromjson(cons!AON_PERF_MONITORED_PROCESS_MODELS)),
+            a!save(local!saveSuccess,     false()),
+            a!save(local!saveError,       false())
+          }
+        )
+      }
+    )
+  )
+)
+  ]]></ae:form>
+
+</ae:interface>

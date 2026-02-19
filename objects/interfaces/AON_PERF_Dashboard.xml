@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_Dashboard
+  Dashboard principale di monitoraggio delle performance applicative.
+
+  Sezioni:
+    1. Filtri       - Periodo, tipo oggetto, ricerca modello
+    2. KPI Cards    - Avg time, p95, processi attivi, alert bloccati
+    3. Alert Banner - Processi bloccati (se presenti)
+    4. Trend Chart  - Grafico a linee giornaliero (asse X = giorni, asse Y = secondi)
+    5. Top Processi - Grid ordinabile per tempo medio (desc)
+    6. Real-time    - Finestra ultimi 5 min: attivi / completati / errori
+
+  Utilizzo: Inserire come pagina di un Appian Site oppure come Report.
+-->
+<ae:interface xmlns:ae="http://www.appian.com/ae/types/2009"
+              name="AON_PERF_Dashboard"
+              description="Dashboard di monitoraggio delle performance applicative: trend giornaliero, KPI, alert processi bloccati e metriche istantanee.">
+
+  <ae:form><![CDATA[
+/* ===========================================
+ * AON_PERF_Dashboard  -  Performance Monitoring
+ * =========================================== */
+a!localVariables(
+
+  /* ---- Stato filtri ---- */
+  local!trendDays:   a!localVariables(
+    local!v: cons!AON_PERF_DEFAULT_TREND_DAYS, local!v
+  ),
+  local!selectedModels: {},
+  local!instantMins: 5,
+  local!refreshTs:   now(),    /* incrementato per forzare refresh */
+
+  /* ---- Caricamento dati ---- */
+  /* Metriche aggregate del periodo */
+  local!metrics: a!refreshVariable(
+    value: rule!AON_PERF_getProcessMetrics(
+      startDate:         today() - local!trendDays,
+      endDate:           today(),
+      processModelNames: local!selectedModels
+    ),
+    refreshOnVarChange: local!refreshTs
+  ),
+
+  /* Trend giornaliero per il grafico */
+  local!trend: a!refreshVariable(
+    value: rule!AON_PERF_getDailyTrend(
+      days:              local!trendDays,
+      processModelNames: local!selectedModels
+    ),
+    refreshOnVarChange: local!refreshTs
+  ),
+
+  /* Metriche istantanee (ultimi N min) */
+  local!instant: a!refreshVariable(
+    value: rule!AON_PERF_getInstantMetrics(
+      minutes:           local!instantMins,
+      processModelNames: local!selectedModels
+    ),
+    refreshOnVarChange: local!refreshTs
+  ),
+
+  /* Verifica processi bloccati */
+  local!stuckCheck: a!refreshVariable(
+    value: rule!AON_PERF_checkStuckProcesses(
+      thresholdMins:     cons!AON_PERF_STUCK_THRESHOLD_MINS,
+      processModelNames: {}
+    ),
+    refreshOnVarChange: local!refreshTs
+  ),
+
+  /* Summary shortcuts */
+  local!summary: index(local!metrics, "summary",
+    { count: 0, avgSec: 0, medianSec: 0, p95Sec: 0, minSec: 0, maxSec: 0 }
+  ),
+  local!byProcess: index(local!metrics, "byProcess", {}),
+  local!stuckList: index(local!stuckCheck, "stuckList", {}),
+  local!hasStuck:  index(local!stuckCheck, "hasStuck", false()),
+
+  /* ============================================================
+   *  LAYOUT PRINCIPALE
+   * ============================================================ */
+  a!formLayout(
+    label: "Performance Monitoring — Hygieia",
+    labelSize: "LARGE",
+    contents: {
+
+      /* ---- BARRA FILTRI ---- */
+      a!sectionLayout(
+        label: "Filtri",
+        labelSize: "SMALL",
+        collapsed: false(),
+        contents: {
+          a!columnsLayout(
+            columns: {
+
+              /* Periodo trend */
+              a!columnLayout(
+                width: "MEDIUM",
+                contents: {
+                  a!dropdownField(
+                    label: "Periodo di analisi",
+                    labelPosition: "ABOVE",
+                    placeholder: "Seleziona periodo...",
+                    choiceLabels: {"7 giorni", "15 giorni", "30 giorni", "60 giorni", "90 giorni"},
+                    choiceValues: {7, 15, 30, 60, 90},
+                    value: local!trendDays,
+                    saveInto: local!trendDays
+                  )
+                }
+              ),
+
+              /* Filtro modelli */
+              a!columnLayout(
+                width: "WIDE",
+                contents: {
+                  a!multipleDropdownField(
+                    label: "Modelli di processo",
+                    labelPosition: "ABOVE",
+                    placeholder: "Tutti i modelli...",
+                    choiceLabels: index(
+                      local!byProcess, "processModelName", {}
+                    ),
+                    choiceValues: index(
+                      local!byProcess, "processModelName", {}
+                    ),
+                    value: local!selectedModels,
+                    saveInto: local!selectedModels
+                  )
+                }
+              ),
+
+              /* Finestra real-time */
+              a!columnLayout(
+                width: "NARROW",
+                contents: {
+                  a!dropdownField(
+                    label: "Finestra real-time",
+                    labelPosition: "ABOVE",
+                    choiceLabels: {"1 min", "5 min", "15 min", "30 min"},
+                    choiceValues: {1, 5, 15, 30},
+                    value: local!instantMins,
+                    saveInto: local!instantMins
+                  )
+                }
+              ),
+
+              /* Pulsante Refresh */
+              a!columnLayout(
+                width: "NARROW",
+                contents: {
+                  a!buttonArrayLayout(
+                    buttons: {
+                      a!buttonWidget(
+                        label: "Aggiorna",
+                        icon: "refresh",
+                        style: "PRIMARY",
+                        saveInto: {
+                          a!save(local!refreshTs, now())
+                        }
+                      )
+                    },
+                    align: "START"
+                  )
+                }
+              )
+            }
+          )
+        }
+      ),
+
+      /* ---- ALERT BANNER (processi bloccati) ---- */
+      a!sectionLayout(
+        showWhen: local!hasStuck,
+        label: "⚠ Processi Bloccati — Attenzione",
+        labelSize: "MEDIUM",
+        labelColor: "NEGATIVE",
+        contents: {
+          a!richTextDisplayField(
+            value: a!richTextItem(
+              text: length(local!stuckList) &
+                " processo/i attivo/i da più di " &
+                cons!AON_PERF_STUCK_THRESHOLD_MINS & " minuti.",
+              color: "NEGATIVE",
+              style: "STRONG"
+            )
+          ),
+          a!gridField(
+            label: "Processi bloccati",
+            labelPosition: "COLLAPSED",
+            data: local!stuckList,
+            columns: {
+              a!gridColumn(
+                label: "Modello di Processo",
+                value: index(fv!row, "processModelName", "")
+              ),
+              a!gridColumn(
+                label: "Nome Istanza",
+                value: index(fv!row, "processName", "")
+              ),
+              a!gridColumn(
+                label: "Avviato il",
+                value: text(index(fv!row, "startTime", null()), "dd/MM/yyyy HH:mm")
+              ),
+              a!gridColumn(
+                label: "In esecuzione da",
+                value: rule!AON_PERF_formatDuration(
+                  seconds: index(fv!row, "runningMins", 0) * 60
+                ),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "Avviato da",
+                value: index(fv!row, "initiator", "")
+              )
+            },
+            rowHeader: 1,
+            showWhen: length(local!stuckList) > 0
+          )
+        }
+      ),
+
+      /* ---- KPI CARDS ---- */
+      a!sectionLayout(
+        label: "Riepilogo periodo — ultimi " & local!trendDays & " giorni",
+        labelSize: "MEDIUM",
+        contents: {
+          a!columnsLayout(
+            columns: {
+
+              /* Card: Totale esecuzioni */
+              a!columnLayout(
+                contents: {
+                  a!cardLayout(
+                    contents: {
+                      a!richTextDisplayField(
+                        labelPosition: "COLLAPSED",
+                        value: {
+                          a!richTextItem(
+                            text: index(local!summary, "count", 0),
+                            size: "LARGE",
+                            style: "STRONG"
+                          ),
+                          char(10),
+                          a!richTextItem(text: "Esecuzioni totali", size: "SMALL", color: "SECONDARY")
+                        },
+                        align: "CENTER"
+                      )
+                    },
+                    height: "AUTO"
+                  )
+                }
+              ),
+
+              /* Card: Tempo medio */
+              a!columnLayout(
+                contents: {
+                  a!cardLayout(
+                    contents: {
+                      a!richTextDisplayField(
+                        labelPosition: "COLLAPSED",
+                        value: {
+                          a!richTextItem(
+                            text: rule!AON_PERF_formatDuration(
+                              seconds: index(local!summary, "avgSec", 0)
+                            ),
+                            size: "LARGE",
+                            style: "STRONG",
+                            color: "STANDARD"
+                          ),
+                          char(10),
+                          a!richTextItem(text: "Tempo medio", size: "SMALL", color: "SECONDARY")
+                        },
+                        align: "CENTER"
+                      )
+                    },
+                    height: "AUTO"
+                  )
+                }
+              ),
+
+              /* Card: p95 */
+              a!columnLayout(
+                contents: {
+                  a!cardLayout(
+                    contents: {
+                      a!richTextDisplayField(
+                        labelPosition: "COLLAPSED",
+                        value: {
+                          a!richTextItem(
+                            text: rule!AON_PERF_formatDuration(
+                              seconds: index(local!summary, "p95Sec", 0)
+                            ),
+                            size: "LARGE",
+                            style: "STRONG",
+                            color: if(
+                              index(local!summary, "p95Sec", 0) > 300,
+                              "NEGATIVE",
+                              "STANDARD"
+                            )
+                          ),
+                          char(10),
+                          a!richTextItem(text: "Percentile 95°", size: "SMALL", color: "SECONDARY")
+                        },
+                        align: "CENTER"
+                      )
+                    },
+                    height: "AUTO"
+                  )
+                }
+              ),
+
+              /* Card: Processi attivi ora */
+              a!columnLayout(
+                contents: {
+                  a!cardLayout(
+                    contents: {
+                      a!richTextDisplayField(
+                        labelPosition: "COLLAPSED",
+                        value: {
+                          a!richTextItem(
+                            text: index(local!instant, "activeCount", 0),
+                            size: "LARGE",
+                            style: "STRONG",
+                            color: if(
+                              index(local!instant, "activeCount", 0) > 50,
+                              "WARN",
+                              "POSITIVE"
+                            )
+                          ),
+                          char(10),
+                          a!richTextItem(
+                            text: "Attivi ora (ultimi " & local!instantMins & " min)",
+                            size: "SMALL",
+                            color: "SECONDARY"
+                          )
+                        },
+                        align: "CENTER"
+                      )
+                    },
+                    height: "AUTO"
+                  )
+                }
+              ),
+
+              /* Card: Errori (finestra instant) */
+              a!columnLayout(
+                contents: {
+                  a!cardLayout(
+                    contents: {
+                      a!richTextDisplayField(
+                        labelPosition: "COLLAPSED",
+                        value: {
+                          a!richTextItem(
+                            text: index(local!instant, "errorCount", 0),
+                            size: "LARGE",
+                            style: "STRONG",
+                            color: if(
+                              index(local!instant, "errorCount", 0) > 0,
+                              "NEGATIVE",
+                              "POSITIVE"
+                            )
+                          ),
+                          char(10),
+                          a!richTextItem(
+                            text: "Errori (ultimi " & local!instantMins & " min)",
+                            size: "SMALL",
+                            color: "SECONDARY"
+                          )
+                        },
+                        align: "CENTER"
+                      )
+                    },
+                    height: "AUTO"
+                  )
+                }
+              )
+
+            } /* /columns */
+          )
+        }
+      ),
+
+      /* ---- GRAFICO TREND GIORNALIERO ---- */
+      a!sectionLayout(
+        label: "Trend giornaliero — tempo medio di esecuzione (secondi)",
+        labelSize: "MEDIUM",
+        contents: {
+          a!lineChartField(
+            label: "Trend giornaliero",
+            labelPosition: "COLLAPSED",
+            categories: index(local!trend, "dates", {}),
+            series: a!forEach(
+              items: index(local!trend, "series", {}),
+              expression: a!chartSeries(
+                label: index($item, "processModelName", ""),
+                data:  index($item, "dailyAvgSec", {})
+              )
+            ),
+            xAxisTitle: "Giorno",
+            yAxisTitle: "Secondi (media giornaliera)",
+            showLegend: true(),
+            showDataLabels: false(),
+            height: "MEDIUM"
+          )
+        }
+      ),
+
+      /* ---- TOP PROCESSI PER TEMPO MEDIO ---- */
+      a!sectionLayout(
+        label: "Dettaglio per modello di processo",
+        labelSize: "MEDIUM",
+        contents: {
+          a!gridField(
+            label: "Metriche per modello",
+            labelPosition: "COLLAPSED",
+            data: a!dataSubset(
+              data:  local!byProcess,
+              startIndex: 1,
+              batchSize: 50,
+              sort: {
+                a!sortInfo(field: "avgSec", ascending: false())
+              }
+            ),
+            columns: {
+              a!gridColumn(
+                label: "Modello di Processo",
+                value: index(fv!row, "processModelName", ""),
+                width: "WIDE"
+              ),
+              a!gridColumn(
+                label: "# Esecuzioni",
+                value: index(fv!row, "count", 0),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "Tempo Medio",
+                value: rule!AON_PERF_formatDuration(
+                  seconds: index(fv!row, "avgSec", 0)
+                ),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "Mediana",
+                value: rule!AON_PERF_formatDuration(
+                  seconds: index(fv!row, "medianSec", 0)
+                ),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "Percentile 95°",
+                value: rule!AON_PERF_formatDuration(
+                  seconds: index(fv!row, "p95Sec", 0)
+                ),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "Min",
+                value: rule!AON_PERF_formatDuration(
+                  seconds: index(fv!row, "minSec", 0)
+                ),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "Max",
+                value: rule!AON_PERF_formatDuration(
+                  seconds: index(fv!row, "maxSec", 0)
+                ),
+                align: "CENTER"
+              ),
+              a!gridColumn(
+                label: "% Errori",
+                value: index(fv!row, "errorRate", 0) & "%",
+                align: "CENTER"
+              )
+            },
+            rowHeader: 1,
+            pagingInfo: a!pagingInfo(startIndex: 1, batchSize: 25)
+          )
+        }
+      ),
+
+      /* ---- REAL-TIME: ULTIMI N MINUTI ---- */
+      a!sectionLayout(
+        label: "Stato in tempo reale — ultimi " & local!instantMins & " minuti",
+        labelSize: "MEDIUM",
+        contents: {
+          a!columnsLayout(
+            columns: {
+
+              /* Mini-grafico a barre orizzontali per processo */
+              a!columnLayout(
+                width: "WIDE",
+                contents: {
+                  a!gridField(
+                    label: "Attività recenti per processo",
+                    labelPosition: "COLLAPSED",
+                    data: index(local!instant, "byProcess", {}),
+                    columns: {
+                      a!gridColumn(
+                        label: "Processo",
+                        value: index(fv!row, "processModelName", ""),
+                        width: "WIDE"
+                      ),
+                      a!gridColumn(
+                        label: "Attivi",
+                        value: index(fv!row, "activeCount", 0),
+                        align: "CENTER"
+                      ),
+                      a!gridColumn(
+                        label: "Completati",
+                        value: index(fv!row, "completedCount", 0),
+                        align: "CENTER"
+                      ),
+                      a!gridColumn(
+                        label: "Errori",
+                        value: index(fv!row, "errorCount", 0),
+                        align: "CENTER"
+                      ),
+                      a!gridColumn(
+                        label: "T. Medio",
+                        value: rule!AON_PERF_formatDuration(
+                          seconds: index(fv!row, "avgSec", null())
+                        ),
+                        align: "CENTER"
+                      )
+                    },
+                    rowHeader: 1,
+                    showWhen: length(index(local!instant, "byProcess", {})) > 0
+                  ),
+                  a!richTextDisplayField(
+                    showWhen: length(index(local!instant, "byProcess", {})) = 0,
+                    value: a!richTextItem(
+                      text: "Nessuna esecuzione negli ultimi " & local!instantMins & " minuti.",
+                      color: "SECONDARY"
+                    )
+                  )
+                }
+              ),
+
+              /* Riepilogo numerico */
+              a!columnLayout(
+                width: "NARROW",
+                contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: {
+                      a!richTextItem(text: "Completati: ", style: "STRONG"),
+                      a!richTextItem(
+                        text: index(local!instant, "completedCount", 0),
+                        color: "POSITIVE"
+                      ),
+                      char(10),
+                      a!richTextItem(text: "Attivi:     ", style: "STRONG"),
+                      a!richTextItem(text: index(local!instant, "activeCount", 0)),
+                      char(10),
+                      a!richTextItem(text: "Errori:     ", style: "STRONG"),
+                      a!richTextItem(
+                        text: index(local!instant, "errorCount", 0),
+                        color: if(
+                          index(local!instant, "errorCount", 0) > 0,
+                          "NEGATIVE",
+                          "STANDARD"
+                        )
+                      ),
+                      char(10),
+                      char(10),
+                      a!richTextItem(
+                        text: "Aggiornato: " &
+                          text(index(local!instant, "lastUpdated", now()), "HH:mm:ss"),
+                        size: "SMALL",
+                        color: "SECONDARY"
+                      )
+                    }
+                  )
+                }
+              )
+
+            }
+          )
+        }
+      )
+
+    }, /* /contents */
+    buttons: a!buttonLayout(
+      primaryButtons: {
+        a!buttonWidget(
+          label: "Esporta Report (CSV)",
+          icon: "download",
+          style: "SECONDARY",
+          saveInto: {}  /* TODO: collegare logica export */
+        )
+      }
+    )
+  ) /* /formLayout */
+)
+  ]]></ae:form>
+
+</ae:interface>

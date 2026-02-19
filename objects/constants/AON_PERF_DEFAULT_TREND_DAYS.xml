@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_DEFAULT_TREND_DAYS
+  Numero di giorni di storico mostrato di default nella dashboard.
+  Modificabile da interfaccia utente; questo valore è il default al caricamento.
+-->
+<ae:constant xmlns:ae="http://www.appian.com/ae/types/2009"
+             name="AON_PERF_DEFAULT_TREND_DAYS"
+             type="Integer"
+             value="30"
+             description="Numero di giorni di storico mostrato di default nella dashboard delle performance (default: 30)."/>

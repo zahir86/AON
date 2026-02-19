@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_formatDuration
+  Helper: converte un numero di secondi in stringa leggibile.
+  Usato da tutte le other rules e dalle interfacce.
+
+  INPUT : ri!seconds (Number(Decimal)) - durata in secondi
+  OUTPUT: Text - es. "2h 14m 03s" oppure "45s" oppure "< 1s"
+-->
+<ae:expressionRule xmlns:ae="http://www.appian.com/ae/types/2009"
+                   name="AON_PERF_formatDuration"
+                   description="Converte secondi in stringa leggibile (es. 2h 14m 03s). Helper usato da tutte le regole di performance.">
+
+  <ae:inputs>
+    <ae:input name="ri!seconds" type="?Number(Decimal)"/>
+  </ae:inputs>
+
+  <ae:expression><![CDATA[
+/* ===========================================
+ * AON_PERF_formatDuration
+ * Converte secondi in stringa human-readable.
+ * =========================================== */
+if(
+  or(isnull(ri!seconds), ri!seconds < 0),
+  "N/D",
+
+  a!localVariables(
+    local!s: tointeger(ri!seconds),
+    local!hours:   int(local!s / 3600),
+    local!minutes: int(mod(local!s, 3600) / 60),
+    local!secs:    mod(local!s, 60),
+
+    if(
+      local!s = 0,
+      "< 1s",
+      if(
+        local!hours > 0,
+        local!hours & "h " & local!minutes & "m " &
+          text(local!secs, "00") & "s",
+        if(
+          local!minutes > 0,
+          local!minutes & "m " & text(local!secs, "00") & "s",
+          local!secs & "s"
+        )
+      )
+    )
+  )
+)
+  ]]></ae:expression>
+
+</ae:expressionRule>

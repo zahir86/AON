@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_getProcessMetrics
+  Interroga il Process Analytics Report e restituisce statistiche aggregate
+  per modello di processo: media, mediana, p95, min, max, error rate.
+
+  INPUT:
+    ri!startDate          - Data inizio (default: oggi - AON_PERF_DEFAULT_TREND_DAYS)
+    ri!endDate            - Data fine   (default: oggi)
+    ri!processModelNames  - Lista nomi da filtrare (vuoto = tutti)
+
+  OUTPUT: Dictionary {
+    summary    : { count, avgSec, medianSec, p95Sec, minSec, maxSec },
+    byProcess  : List of { processModelName, count, avgSec, p95Sec, minSec, maxSec, errorRate },
+    rawData    : List of { processName, processModelName, startTime, completionTime,
+                           elapsedSec, status, initiator }
+  }
+
+  PREREQUISITI: Costante AON_PERF_PAR_EXECUTION_TIMES configurata con UUID del PAR.
+-->
+<ae:expressionRule xmlns:ae="http://www.appian.com/ae/types/2009"
+                   name="AON_PERF_getProcessMetrics"
+                   description="Recupera metriche di esecuzione dai processi tramite Process Analytics Report. Restituisce statistiche aggregate per modello di processo.">
+
+  <ae:inputs>
+    <ae:input name="ri!startDate"         type="?Date"/>
+    <ae:input name="ri!endDate"           type="?Date"/>
+    <ae:input name="ri!processModelNames" type="List of Text String"/>
+  </ae:inputs>
+
+  <ae:expression><![CDATA[
+/* ===========================================
+ * AON_PERF_getProcessMetrics
+ *
+ * Legge il PAR configurato e calcola statistiche
+ * aggregate per modello di processo.
+ * =========================================== */
+a!localVariables(
+  local!start: if(isnull(ri!startDate),
+    today() - cons!AON_PERF_DEFAULT_TREND_DAYS,
+    ri!startDate
+  ),
+  local!end: if(isnull(ri!endDate), today(), ri!endDate),
+
+  /* --- Query al Process Analytics Report --- */
+  local!queryResult: a!queryProcessAnalytics(
+    processAnalyticsReport: a!processAnalyticsReportById(
+      id: cons!AON_PERF_PAR_EXECUTION_TIMES
+    ),
+    query: a!query(
+      selection: a!querySelection(
+        columns: {
+          a!queryColumn(field: "c1"),   /* processName        */
+          a!queryColumn(field: "c2"),   /* processModelName   */
+          a!queryColumn(field: "c3"),   /* startTime          */
+          a!queryColumn(field: "c4"),   /* completionTime     */
+          a!queryColumn(field: "c5"),   /* elapsedSec         */
+          a!queryColumn(field: "c6"),   /* status             */
+          a!queryColumn(field: "c7")    /* initiator          */
+        }
+      ),
+      filter: a!queryLogicalExpression(
+        operator: "AND",
+        filters: {
+          a!queryFilter(field: "c3", operator: ">=", value: local!start),
+          a!queryFilter(field: "c3", operator: "<=", value: local!end + 1),
+          if(
+            not(isnull(ri!processModelNames)) &
+              length(ri!processModelNames) > 0,
+            a!queryFilter(
+              field: "c2",
+              operator: "in",
+              value: ri!processModelNames
+            ),
+            {}
+          )
+        }
+      ),
+      pagingInfo: a!pagingInfo(startIndex: 1, batchSize: 5000)
+    )
+  ),
+
+  local!rows: index(local!queryResult, "data", {}),
+  local!count: length(local!rows),
+
+  /* --- Statistiche globali --- */
+  local!allTimes: index(local!rows, "c5", {}),
+  local!sorted:   sort(
+    filter(lambda!v(not(isnull(v))), local!allTimes),
+    true()
+  ),
+  local!validCount: length(local!sorted),
+
+  local!summary: if(
+    local!validCount = 0,
+    { count: 0, avgSec: 0, medianSec: 0, p95Sec: 0, minSec: 0, maxSec: 0 },
+    {
+      count:     local!count,
+      avgSec:    round(average(local!sorted), 1),
+      medianSec: local!sorted[max(1, round(local!validCount * 0.50, 0))],
+      p95Sec:    local!sorted[max(1, round(local!validCount * 0.95, 0))],
+      minSec:    local!sorted[1],
+      maxSec:    local!sorted[local!validCount]
+    }
+  ),
+
+  /* --- Statistiche per singolo modello di processo --- */
+  local!uniqueModels: toSet(
+    filter(lambda!v(not(isnull(v))), index(local!rows, "c2", {}))
+  ),
+
+  local!byProcess: a!forEach(
+    items: local!uniqueModels,
+    expression: a!localVariables(
+      local!pmRows: filter(
+        lambda!row(index(row, "c2", "") = $item),
+        local!rows
+      ),
+      local!pmTimes: filter(
+        lambda!v(not(isnull(v))),
+        index(local!pmRows, "c5", {})
+      ),
+      local!pmSorted: sort(local!pmTimes, true()),
+      local!pmCount:  length(local!pmRows),
+      local!pmValid:  length(local!pmSorted),
+      local!errCount: length(filter(
+        lambda!row(index(row, "c6", "") = "ERROR"),
+        local!pmRows
+      )),
+      {
+        processModelName: $item,
+        count:     local!pmCount,
+        avgSec:    if(local!pmValid = 0, 0,
+                     round(average(local!pmSorted), 1)),
+        medianSec: if(local!pmValid = 0, 0,
+                     local!pmSorted[max(1, round(local!pmValid * 0.50, 0))]),
+        p95Sec:    if(local!pmValid = 0, 0,
+                     local!pmSorted[max(1, round(local!pmValid * 0.95, 0))]),
+        minSec:    if(local!pmValid = 0, 0, local!pmSorted[1]),
+        maxSec:    if(local!pmValid = 0, 0, local!pmSorted[local!pmValid]),
+        errorRate: if(local!pmCount = 0, 0,
+                     round(local!errCount * 100 / local!pmCount, 1))
+      }
+    )
+  ),
+
+  /* --- Output --- */
+  {
+    summary:   local!summary,
+    byProcess: local!byProcess,
+    rawData: a!forEach(
+      items: local!rows,
+      expression: {
+        processName:      index($item, "c1", ""),
+        processModelName: index($item, "c2", ""),
+        startTime:        index($item, "c3", null()),
+        completionTime:   index($item, "c4", null()),
+        elapsedSec:       index($item, "c5", null()),
+        status:           index($item, "c6", ""),
+        initiator:        index($item, "c7", "")
+      }
+    )
+  }
+)
+  ]]></ae:expression>
+
+</ae:expressionRule>

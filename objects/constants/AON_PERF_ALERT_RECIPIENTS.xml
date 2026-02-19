@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AON_PERF_ALERT_RECIPIENTS
+  Lista degli indirizzi email a cui inviare le notifiche di alert
+  (processi bloccati, soglie superate, errori critici).
+  Separare più indirizzi con punto e virgola: "utente1@azienda.it;utente2@azienda.it"
+
+  CONFIGURARE PRIMA DEL DEPLOY IN PRODUZIONE.
+-->
+<ae:constant xmlns:ae="http://www.appian.com/ae/types/2009"
+             name="AON_PERF_ALERT_RECIPIENTS"
+             type="Text"
+             value="team-operations@azienda.it"
+             description="Lista indirizzi email (separati da ';') destinatari degli alert di performance e processi bloccati."/>
