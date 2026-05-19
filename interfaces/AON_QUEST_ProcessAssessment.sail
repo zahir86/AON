@@ -548,7 +548,7 @@ a!localVariables(
                 buttons: {
                   a!buttonWidget(
                     label:    "Back",
-                    style:    "NORMAL",
+                    style:    "GHOST",
                     showWhen: local!currentStep > 1,
                     saveInto: a!save(local!currentStep, local!currentStep - 1)
                   )
@@ -565,13 +565,13 @@ a!localVariables(
                 buttons: {
                   a!buttonWidget(
                     label:    "Next",
-                    style:    "PRIMARY",
+                    style:    "SOLID",
                     showWhen: local!currentStep < local!totalSteps,
                     saveInto: a!save(local!currentStep, local!currentStep + 1)
                   ),
                   a!buttonWidget(
                     label:    "Submit Assessment",
-                    style:    "PRIMARY",
+                    style:    "SOLID",
                     showWhen: local!currentStep = local!totalSteps,
                     validate: true(),
                     saveInto: a!save(local!submitted, true())
