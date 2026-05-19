@@ -546,7 +546,6 @@ a!localVariables(
           label:    "Next  →",
           style:    "PRIMARY",
           showWhen: local!currentStep < local!totalSteps,
-          validate: false(),
           saveInto: a!save(local!currentStep, local!currentStep + 1)
         ),
         a!buttonWidget(
@@ -563,7 +562,6 @@ a!localVariables(
           label:    "←  Back",
           style:    "NORMAL",
           showWhen: local!currentStep > 1 and not(local!submitted),
-          validate: false(),
           saveInto: a!save(local!currentStep, local!currentStep - 1)
         )
       }
