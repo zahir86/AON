@@ -519,10 +519,10 @@ a!localVariables(
                 size:  "LARGE"
               ),
               char(10), char(10),
-              a!richTextItem(text: "Process: ",          style: "STRONG"),
+              a!richTextItem(text: "Process: ",    style: "STRONG"),
               a!richTextItem(text: local!processName),
               char(10),
-              a!richTextItem(text: "Department: ",       style: "STRONG"),
+              a!richTextItem(text: "Department: ", style: "STRONG"),
               a!richTextItem(text: local!department),
               char(10), char(10),
               a!richTextItem(
@@ -533,38 +533,56 @@ a!localVariables(
             }
           )
         }
+      ),
+
+      /* ============================================================
+       * NAVIGAZIONE WIZARD (in contents — showWhen supportato qui)
+       * ============================================================ */
+      a!columnsLayout(
+        showWhen: not(local!submitted),
+        columns: {
+          a!columnLayout(
+            width: "NARROW",
+            contents: {
+              a!buttonArrayLayout(
+                buttons: {
+                  a!buttonWidget(
+                    label:    "Back",
+                    style:    "NORMAL",
+                    showWhen: local!currentStep > 1,
+                    saveInto: a!save(local!currentStep, local!currentStep - 1)
+                  )
+                }
+              )
+            }
+          ),
+          a!columnLayout(contents: {}),
+          a!columnLayout(
+            width: "NARROW",
+            contents: {
+              a!buttonArrayLayout(
+                align: "RIGHT",
+                buttons: {
+                  a!buttonWidget(
+                    label:    "Next",
+                    style:    "PRIMARY",
+                    showWhen: local!currentStep < local!totalSteps,
+                    saveInto: a!save(local!currentStep, local!currentStep + 1)
+                  ),
+                  a!buttonWidget(
+                    label:    "Submit Assessment",
+                    style:    "PRIMARY",
+                    showWhen: local!currentStep = local!totalSteps,
+                    validate: true(),
+                    saveInto: a!save(local!submitted, true())
+                  )
+                }
+              )
+            }
+          )
+        }
       )
 
-    },
-
-    /* ============================================================
-     * NAVIGAZIONE WIZARD
-     * ============================================================ */
-    buttons: a!buttonLayout(
-      primaryButtons: {
-        a!buttonWidget(
-          label:    "Next  →",
-          style:    "PRIMARY",
-          showWhen: local!currentStep < local!totalSteps,
-          saveInto: a!save(local!currentStep, local!currentStep + 1)
-        ),
-        a!buttonWidget(
-          label:    "Submit Assessment",
-          style:    "PRIMARY",
-          icon:     "check",
-          showWhen: local!currentStep = local!totalSteps,
-          validate: true(),
-          saveInto: a!save(local!submitted, true())
-        )
-      },
-      secondaryButtons: {
-        a!buttonWidget(
-          label:    "←  Back",
-          style:    "NORMAL",
-          showWhen: local!currentStep > 1 and not(local!submitted),
-          saveInto: a!save(local!currentStep, local!currentStep - 1)
-        )
-      }
-    )
+    }
   )
 )
