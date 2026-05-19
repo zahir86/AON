@@ -561,7 +561,7 @@ a!localVariables(
             width: "NARROW",
             contents: {
               a!buttonArrayLayout(
-                align: "RIGHT",
+                align: "END",
                 buttons: {
                   a!buttonWidget(
                     label:    "Next",
