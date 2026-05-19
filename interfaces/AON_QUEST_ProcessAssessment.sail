@@ -100,7 +100,7 @@ a!localVariables(
                     labelPosition: "COLLAPSED",
                     align: "RIGHT",
                     value: a!richTextItem(
-                      text: tostring(tointeger(((local!currentStep - 1) / local!totalSteps) * 100)) & "% complete",
+                      text: text(((local!currentStep - 1) * 100) / local!totalSteps, "#0") & "% complete",
                       color: "SECONDARY",
                       size:  "SMALL"
                     )
@@ -113,14 +113,14 @@ a!localVariables(
           /* Barra di avanzamento a blocchi colorati */
           a!columnsLayout(
             columns: a!forEach(
-              items: enumerate(local!totalSteps) + 1,
+              items: enumerate(local!totalSteps),
               expression: a!columnLayout(
                 contents: {
                   a!richTextDisplayField(
                     labelPosition: "COLLAPSED",
                     value: a!richTextItem(
                       text:  "▬▬▬",
-                      color: if($item <= local!currentStep, "ACCENT", "SECONDARY"),
+                      color: if(fv!index <= local!currentStep, "ACCENT", "SECONDARY"),
                       size:  "LARGE"
                     )
                   )
