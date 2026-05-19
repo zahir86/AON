@@ -63,8 +63,6 @@ a!localVariables(
         showWhen:      not(local!submitted),
         labelPosition: "COLLAPSED",
         contents: {
-
-          /* Step label + percentuale */
           a!columnsLayout(
             columns: {
               a!columnLayout(
@@ -109,8 +107,6 @@ a!localVariables(
               )
             }
           ),
-
-          /* Barra di avanzamento a blocchi colorati */
           a!columnsLayout(
             columns: a!forEach(
               items: enumerate(local!totalSteps),
@@ -159,27 +155,11 @@ a!localVariables(
             label:        "Department / Business Area",
             instructions: "Which business area owns the process?",
             placeholder:  "Select a department...",
-            choiceLabels: {
-              "Finance",
-              "HR",
-              "Operations",
-              "Customer Service",
-              "IT",
-              "Legal",
-              "Other"
-            },
-            choiceValues: {
-              "Finance",
-              "HR",
-              "Operations",
-              "Customer Service",
-              "IT",
-              "Legal",
-              "Other"
-            },
-            value:    local!department,
-            saveInto: local!department,
-            required: true()
+            choiceLabels: {"Finance","HR","Operations","Customer Service","IT","Legal","Other"},
+            choiceValues: {"Finance","HR","Operations","Customer Service","IT","Legal","Other"},
+            value:        local!department,
+            saveInto:     local!department,
+            required:     true()
           )
         }
       ),
@@ -196,53 +176,85 @@ a!localVariables(
             columns: {
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "How important is the process for business operations?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Business Impact",
-                    instructions: "How important is the process for business operations?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!businessImpact,
-                    saveInto:     local!businessImpact,
-                    required:     true()
+                    label:         "Business Impact",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!businessImpact,
+                    saveInto:      local!businessImpact,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Does the process directly affect customer experience?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Customer Impact",
-                    instructions: "Does the process directly affect customer experience?",
-                    choiceLabels: {"Yes", "No"},
-                    choiceValues: {"Yes", "No"},
-                    value:        local!customerImpact,
-                    saveInto:     local!customerImpact,
-                    required:     true()
+                    label:         "Customer Impact",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Yes", "No"},
+                    choiceValues:  {"Yes", "No"},
+                    value:         local!customerImpact,
+                    saveInto:      local!customerImpact,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "How critical is the process for organizational performance?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Process Criticality",
-                    instructions: "How critical is the process for organizational performance?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!processCriticality,
-                    saveInto:     local!processCriticality,
-                    required:     true()
+                    label:         "Process Criticality",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!processCriticality,
+                    saveInto:      local!processCriticality,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "How frequently is the process executed?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Frequency",
-                    instructions: "How frequently is the process executed?",
-                    choiceLabels: {"Daily", "Weekly", "Monthly", "Occasionally"},
-                    choiceValues: {"Daily", "Weekly", "Monthly", "Occasionally"},
-                    value:        local!frequency,
-                    saveInto:     local!frequency,
-                    required:     true()
+                    label:         "Frequency",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Daily", "Weekly", "Monthly", "Occasionally"},
+                    choiceValues:  {"Daily", "Weekly", "Monthly", "Occasionally"},
+                    value:         local!frequency,
+                    saveInto:      local!frequency,
+                    required:      true()
                   )
                 }
               )
@@ -263,40 +275,64 @@ a!localVariables(
             columns: {
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Is the process standardized and rule-based?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Standardization",
-                    instructions: "Is the process standardized and rule-based?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!standardization,
-                    saveInto:     local!standardization,
-                    required:     true()
+                    label:         "Standardization",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!standardization,
+                    saveInto:      local!standardization,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Are the activities repetitive?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Repeatability",
-                    instructions: "Are the activities repetitive?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!repeatability,
-                    saveInto:     local!repeatability,
-                    required:     true()
+                    label:         "Repeatability",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!repeatability,
+                    saveInto:      local!repeatability,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Is the process formally documented?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Documentation",
-                    instructions: "Is the process formally documented?",
-                    choiceLabels: {"Yes", "Partially", "No"},
-                    choiceValues: {"Yes", "Partially", "No"},
-                    value:        local!documentation,
-                    saveInto:     local!documentation,
-                    required:     true()
+                    label:         "Documentation",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Yes", "Partially", "No"},
+                    choiceValues:  {"Yes", "Partially", "No"},
+                    value:         local!documentation,
+                    saveInto:      local!documentation,
+                    required:      true()
                   )
                 }
               )
@@ -306,40 +342,64 @@ a!localVariables(
             columns: {
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Is process data available and accessible?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Data Availability",
-                    instructions: "Is process data available and accessible?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!dataAvailability,
-                    saveInto:     local!dataAvailability,
-                    required:     true()
+                    label:         "Data Availability",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!dataAvailability,
+                    saveInto:      local!dataAvailability,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "What type of data does the process handle?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Data Type",
-                    instructions: "What type of data does the process handle?",
-                    choiceLabels: {"Structured", "Unstructured", "Mixed"},
-                    choiceValues: {"Structured", "Unstructured", "Mixed"},
-                    value:        local!dataType,
-                    saveInto:     local!dataType,
-                    required:     true()
+                    label:         "Data Type",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Structured", "Unstructured", "Mixed"},
+                    choiceValues:  {"Structured", "Unstructured", "Mixed"},
+                    value:         local!dataType,
+                    saveInto:      local!dataType,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Does the process involve multiple systems?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "System Integration",
-                    instructions: "Does the process involve multiple systems?",
-                    choiceLabels: {"Yes", "No"},
-                    choiceValues: {"Yes", "No"},
-                    value:        local!systemIntegration,
-                    saveInto:     local!systemIntegration,
-                    required:     true()
+                    label:         "System Integration",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Yes", "No"},
+                    choiceValues:  {"Yes", "No"},
+                    value:         local!systemIntegration,
+                    saveInto:      local!systemIntegration,
+                    required:      true()
                   )
                 }
               )
@@ -360,53 +420,85 @@ a!localVariables(
             columns: {
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Is the process subject to regulatory or compliance requirements?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Regulatory Exposure",
-                    instructions: "Is the process subject to regulatory or compliance requirements?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!regulatoryExposure,
-                    saveInto:     local!regulatoryExposure,
-                    required:     true()
+                    label:         "Regulatory Exposure",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!regulatoryExposure,
+                    saveInto:      local!regulatoryExposure,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Does the process require human validation or approval?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Human Oversight",
-                    instructions: "Does the process require human validation or approval?",
-                    choiceLabels: {"Yes", "No"},
-                    choiceValues: {"Yes", "No"},
-                    value:        local!humanOversight,
-                    saveInto:     local!humanOversight,
-                    required:     true()
+                    label:         "Human Oversight",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Yes", "No"},
+                    choiceValues:  {"Yes", "No"},
+                    value:         local!humanOversight,
+                    saveInto:      local!humanOversight,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Could automation errors significantly impact customers or operations?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Decision Sensitivity",
-                    instructions: "Could automation errors significantly impact customers or operations?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!decisionSensitivity,
-                    saveInto:     local!decisionSensitivity,
-                    required:     true()
+                    label:         "Decision Sensitivity",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!decisionSensitivity,
+                    saveInto:      local!decisionSensitivity,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Is auditability and traceability required?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Auditability",
-                    instructions: "Is auditability and traceability required?",
-                    choiceLabels: {"Yes", "No"},
-                    choiceValues: {"Yes", "No"},
-                    value:        local!auditability,
-                    saveInto:     local!auditability,
-                    required:     true()
+                    label:         "Auditability",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Yes", "No"},
+                    choiceValues:  {"Yes", "No"},
+                    value:         local!auditability,
+                    saveInto:      local!auditability,
+                    required:      true()
                   )
                 }
               )
@@ -427,40 +519,64 @@ a!localVariables(
             columns: {
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "How much manual effort is required?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Manual Effort",
-                    instructions: "How much manual effort is required?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!manualEffort,
-                    saveInto:     local!manualEffort,
-                    required:     true()
+                    label:         "Manual Effort",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!manualEffort,
+                    saveInto:      local!manualEffort,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "How often do errors occur?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Error Frequency",
-                    instructions: "How often do errors occur?",
-                    choiceLabels: {"Rarely", "Occasionally", "Frequently"},
-                    choiceValues: {"Rarely", "Occasionally", "Frequently"},
-                    value:        local!errorFrequency,
-                    saveInto:     local!errorFrequency,
-                    required:     true()
+                    label:         "Error Frequency",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Rarely", "Occasionally", "Frequently"},
+                    choiceValues:  {"Rarely", "Occasionally", "Frequently"},
+                    value:         local!errorFrequency,
+                    saveInto:      local!errorFrequency,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Is the process execution time considered excessive?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Processing Time",
-                    instructions: "Is the process execution time considered excessive?",
-                    choiceLabels: {"Yes", "No"},
-                    choiceValues: {"Yes", "No"},
-                    value:        local!processingTime,
-                    saveInto:     local!processingTime,
-                    required:     true()
+                    label:         "Processing Time",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Yes", "No"},
+                    choiceValues:  {"Yes", "No"},
+                    value:         local!processingTime,
+                    saveInto:      local!processingTime,
+                    required:      true()
                   )
                 }
               )
@@ -470,31 +586,46 @@ a!localVariables(
             columns: {
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "How likely is organizational resistance to automation?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Employee Resistance",
-                    instructions: "How likely is organizational resistance to automation?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!employeeResistance,
-                    saveInto:     local!employeeResistance,
-                    required:     true()
+                    label:         "Employee Resistance",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!employeeResistance,
+                    saveInto:      local!employeeResistance,
+                    required:      true()
                   )
                 }
               ),
               a!columnLayout(
                 contents: {
+                  a!richTextDisplayField(
+                    labelPosition: "COLLAPSED",
+                    value: a!richTextItem(
+                      text:  "Would employees require significant training?",
+                      color: "SECONDARY",
+                      size:  "SMALL"
+                    )
+                  ),
                   a!radioButtonField(
-                    label:        "Training Needs",
-                    instructions: "Would employees require significant training?",
-                    choiceLabels: {"Low", "Medium", "High"},
-                    choiceValues: {"Low", "Medium", "High"},
-                    value:        local!trainingNeeds,
-                    saveInto:     local!trainingNeeds,
-                    required:     true()
+                    label:         "Training Needs",
+                    labelPosition: "COLLAPSED",
+                    choiceLabels:  {"Low", "Medium", "High"},
+                    choiceValues:  {"Low", "Medium", "High"},
+                    value:         local!trainingNeeds,
+                    saveInto:      local!trainingNeeds,
+                    required:      true()
                   )
                 }
               ),
-              /* colonna vuota per bilanciare il layout */
               a!columnLayout(contents: {})
             }
           )
@@ -536,7 +667,7 @@ a!localVariables(
       ),
 
       /* ============================================================
-       * NAVIGAZIONE WIZARD (in contents — showWhen supportato qui)
+       * NAVIGAZIONE WIZARD
        * ============================================================ */
       a!columnsLayout(
         showWhen: not(local!submitted),
